@@ -5,7 +5,156 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uy-joy Elonlari Xaritasi</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <link rel="stylesheet" href="styles.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/MarkerCluster.Default.min.css" />
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            font-family: Arial, sans-serif;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            z-index: 1;
+        }
+
+        #loader {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 255, 255, 0.9);
+            padding: 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        #listing-details {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .details-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .details-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        #close-details {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+        }
+
+        .details-content p {
+            margin: 8px 0;
+        }
+
+        #show-more {
+            background-color: #0088cc;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+            width: 100%;
+        }
+
+        #show-more:hover {
+            background-color: #006ba1;
+        }
+
+        /* Marker cluster styles */
+        .marker-cluster-small {
+            background-color: rgba(181, 226, 140, 0.6);
+        }
+        .marker-cluster-small div {
+            background-color: rgba(110, 204, 57, 0.6);
+        }
+
+        .marker-cluster-medium {
+            background-color: rgba(241, 211, 87, 0.6);
+        }
+        .marker-cluster-medium div {
+            background-color: rgba(240, 194, 12, 0.6);
+        }
+
+        .marker-cluster-large {
+            background-color: rgba(253, 156, 115, 0.6);
+        }
+        .marker-cluster-large div {
+            background-color: rgba(241, 128, 23, 0.6);
+        }
+
+        .marker-cluster {
+            background-clip: padding-box;
+            border-radius: 20px;
+        }
+        .marker-cluster div {
+            width: 30px;
+            height: 30px;
+            margin-left: 5px;
+            margin-top: 5px;
+            text-align: center;
+            border-radius: 15px;
+            font: 12px "Helvetica Neue", Arial, Helvetica, sans-serif;
+        }
+        .marker-cluster span {
+            line-height: 30px;
+        }
+
+        .custom-marker {
+            background-color: #ffffff;
+            border: 2px solid #0088cc;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            font-size: 16px;
+        }
+
+        .family-listing {
+            border-color: #4caf50;
+        }
+
+        .girls-listing {
+            border-color: #e91e63;
+        }
+
+        .kids-listing {
+            border-color: #ff9800;
+        }
+
+        .all-listing {
+            border-color: #9c27b0;
+        }
+    </style>
 </head>
 <body>
     <div id="map"></div>
@@ -25,7 +174,207 @@
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/leaflet.markercluster@1.4.1/dist/leaflet.markercluster.js"></script>
-    <script src="app.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.4.1/leaflet.markercluster.min.js"></script>
+    <script>
+        // WebApp initialization
+        document.addEventListener('DOMContentLoaded', function() {
+            // Initialize map
+            const map = L.map('map').setView([41.3110, 69.2797], 10); // Toshkent markazi
+            
+            // Add tile layer
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+            
+            // Initialize marker cluster group
+            const markers = L.markerClusterGroup({
+                chunkedLoading: true,
+                maxClusterRadius: 80
+            });
+            
+            // Add marker cluster to map
+            map.addLayer(markers);
+            
+            // Get active listings from the bot's backend
+            loadActiveListings();
+            
+            // Function to load active listings
+            function loadActiveListings() {
+                // In a real implementation, this would fetch from your bot's API
+                document.getElementById('loader').classList.remove('hidden');
+                
+                // This would be replaced with actual API call to your backend
+                setTimeout(() => {
+                    // Simulate API response with test data
+                    const listings = getTestListings();
+                    displayListingsOnMap(listings);
+                    document.getElementById('loader').classList.add('hidden');
+                }, 1000);
+            }
+            
+            // Function to display listings on map
+            function displayListingsOnMap(listings) {
+                markers.clearLayers();
+                
+                listings.forEach(listing => {
+                    if (listing.location) {
+                        const [lat, lng] = listing.location.split(',').map(coord => parseFloat(coord.trim()));
+                        
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                            // Create custom icon based on category
+                            const icon = L.divIcon({
+                                className: `custom-marker ${getCategoryClass(listing.category)}`,
+                                html: `<div>${getCategoryEmoji(listing.category)}</div>`,
+                                iconSize: [30, 30],
+                                iconAnchor: [15, 15]
+                            });
+                            
+                            const marker = L.marker([lat, lng], { icon: icon });
+                            
+                            // Add popup with basic info
+                            marker.bindPopup(`
+                                <strong>${listing.title}</strong><br>
+                                Turi: ${listing.category}<br>
+                                Narxi: ${listing.price} ${listing.currency}<br>
+                                <button onclick="requestListingDetails(${listing.id})">Batafsil ma'lumot</button>
+                            `);
+                            
+                            // Add click event for showing details panel
+                            marker.on('click', function() {
+                                showListingDetails(listing);
+                            });
+                            
+                            markers.addLayer(marker);
+                        }
+                    }
+                });
+            }
+            
+            // Function to show listing details in the panel
+            function showListingDetails(listing) {
+                document.getElementById('listing-title').textContent = listing.title;
+                document.getElementById('listing-category').textContent = listing.category;
+                document.getElementById('listing-price').textContent = `${listing.price} ${listing.currency}`;
+                document.getElementById('listing-floor').textContent = `${listing.floor}-qavat`;
+                document.getElementById('listing-rooms').textContent = `${listing.rooms} xona`;
+                
+                // Store the current listing for the details button
+                document.getElementById('show-more').dataset.listingId = listing.id;
+                
+                document.getElementById('listing-details').classList.remove('hidden');
+            }
+            
+            // Close details panel
+            document.getElementById('close-details').addEventListener('click', function() {
+                document.getElementById('listing-details').classList.add('hidden');
+            });
+            
+            // Request more details button
+            document.getElementById('show-more').addEventListener('click', function() {
+                const listingId = this.dataset.listingId;
+                if (listingId) {
+                    requestListingDetails(parseInt(listingId));
+                }
+            });
+            
+            // Generate test data (replace with actual API call)
+            function getTestListings() {
+                return [
+                    {
+                        id: 1,
+                        title: "Yangi uy, oilaga",
+                        category: "Oilaga",
+                        price: "500,000",
+                        currency: "so'm",
+                        floor: "3",
+                        rooms: "3",
+                        location: "41.3110, 69.2797"
+                    },
+                    {
+                        id: 2,
+                        title: "Qizlar uchun kvartira",
+                        category: "Qizlarga",
+                        price: "450,000",
+                        currency: "so'm",
+                        floor: "5",
+                        rooms: "2",
+                        location: "41.3150, 69.2850"
+                    },
+                    {
+                        id: 3,
+                        title: "Bollarga qulay uy",
+                        category: "Bollarga",
+                        price: "600,000",
+                        currency: "so'm",
+                        floor: "2",
+                        rooms: "4",
+                        location: "41.3050, 69.2750"
+                    },
+                    {
+                        id: 4,
+                        title: "Hamma uchun kvartira",
+                        category: "Hammaga",
+                        price: "550,000",
+                        currency: "so'm",
+                        floor: "4",
+                        rooms: "3",
+                        location: "41.3200, 69.2900"
+                    },
+                    {
+                        id: 5,
+                        title: "Oilaviy kvartira",
+                        category: "Oilaga",
+                        price: "700,000",
+                        currency: "so'm",
+                        floor: "1",
+                        rooms: "4",
+                        location: "41.3000, 69.2700"
+                    }
+                ];
+            }
+            
+            // Helper function to get category class
+            function getCategoryClass(category) {
+                const classes = {
+                    "Oilaga": "family-listing",
+                    "Qizlarga": "girls-listing",
+                    "Bollarga": "kids-listing",
+                    "Hammaga": "all-listing"
+                };
+                return classes[category] || "default-listing";
+            }
+            
+            // Helper function to get category emoji
+            function getCategoryEmoji(category) {
+                const emojis = {
+                    "Oilaga": "👨‍👩‍👧‍👦",
+                    "Qizlarga": "👩",
+                    "Bollarga": "👶",
+                    "Hammaga": "👥"
+                };
+                return emojis[category] || "🏠";
+            }
+        });
+
+        // Function to request listing details (to be called from Telegram bot)
+        function requestListingDetails(listingId) {
+            // This will send a message to the Telegram bot with the listing ID
+            if (window.Telegram && window.Telegram.WebApp) {
+                Telegram.WebApp.sendData(JSON.stringify({
+                    action: "listing_details",
+                    listing_id: listingId
+                }));
+            } else {
+                // For testing outside Telegram
+                alert(`Batafsil ma'lumot so'raldi: Elon ID ${listingId}`);
+            }
+        }
+
+        // Initialize Telegram WebApp
+        if (window.Telegram && window.Telegram.WebApp) {
+            Telegram.WebApp.ready();
+            Telegram.WebApp.expand();
+        }
+    </script>
 </body>
 </html>
